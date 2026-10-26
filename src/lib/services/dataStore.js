@@ -37,8 +37,9 @@ export function getDefaults() {
 
     productPricing: [
       { id: 'sliding-window-2track', label: '2-Track Sliding Window', rate_per_sqft: 350 },
-      { id: 'sliding-window-3track', label: '3-Track Sliding Window', rate_per_sqft: 450 },
-      { id: 'casement-window',       label: 'Casement Window',        rate_per_sqft: 400 },
+      { id: 'casement-window-2door', label: 'Casement Window (2 Door)', rate_per_sqft: 420 },
+      { id: 'casement-window-4door', label: 'Casement Window (4 Door)', rate_per_sqft: 480 },
+      { id: 'aluminium-door',        label: 'Aluminium Door (Openable)', rate_per_sqft: 500 },
     ],
   };
 }
