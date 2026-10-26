@@ -1,0 +1,86 @@
+'use client';
+
+import { useState, useContext, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { AuthContext } from '@/context/AuthContext';
+import { EyeIcon, EyeOffIcon } from '@/components/Icons';
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const { login, user, loading } = useContext(AuthContext);
+  const router = useRouter();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/calculator');
+    }
+  }, [user, loading, router]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      await login(email, password);
+      router.push('/calculator');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  if (loading) return null;
+  if (user) return null;
+
+  return (
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2>Welcome Back</h2>
+        <p>Login to your account to continue</p>
+
+        {error && <div className="auth-error">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              placeholder="Enter your email"
+            />
+          </div>
+          <div className="form-group">
+            <label>Password</label>
+            <div className="password-input-wrapper">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                placeholder="Enter your password"
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
+          </div>
+          <button type="submit" className="btn-primary auth-btn">Login</button>
+        </form>
+
+        <div className="auth-footer">
+          Don&apos;t have an account? <Link href="/register">Register here</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
