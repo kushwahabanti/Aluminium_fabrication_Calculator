@@ -1,42 +1,54 @@
 'use client';
 
-import { useState, useEffect, useContext } from 'react';
-import { API_BASE_URL } from '@/lib/config';
+import { useState, useEffect, useContext, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { AuthContext } from '@/context/AuthContext';
 import ProtectedLayout from '@/components/ProtectedLayout';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function ReportsPageContent() {
-  const { token } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [reportMonth, setReportMonth] = useState(0);
   const [reportYear, setReportYear] = useState(2024);
   const [isClient, setIsClient] = useState(false);
+  const supabase = createClient();
 
-  useEffect(() => { 
-    setReportMonth(new Date().getMonth());
-    setReportYear(new Date().getFullYear());
-    setIsClient(true);
-    fetchQuotations(); 
-  }, []);
-
-  const fetchQuotations = async () => {
+  const fetchQuotations = useCallback(async () => {
+    if (!user) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/quotations`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error('Failed to fetch data');
-      const data = await response.json();
-      setQuotations(data);
+      const { data, error: fetchError } = await supabase
+        .from('quotations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (fetchError) throw fetchError;
+
+      const mapped = data.map(q => ({
+        ...q,
+        totalMaterialCost: q.total_material_cost,
+        labourCost: q.labour_cost,
+        additionalCharges: q.additional_charges,
+        finalPrice: q.final_price,
+        createdAt: q.created_at
+      }));
+      setQuotations(mapped);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    setReportMonth(new Date().getMonth());
+    setReportYear(new Date().getFullYear());
+    setIsClient(true);
+    fetchQuotations();
+  }, [fetchQuotations]);
 
   const monthlyQuotes = quotations.filter(q => {
     const d = new Date(q.createdAt);

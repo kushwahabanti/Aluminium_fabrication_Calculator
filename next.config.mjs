@@ -2,17 +2,46 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Mongoose and other Node.js packages need to stay server-side
-  serverExternalPackages: ['mongoose'],
-
-  // Optimize images if needed in future
+  // Supabase image domains for avatars
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: '**.supabase.co',
       },
     ],
+  },
+
+  // Compress responses
+  compress: true,
+
+  // Enable experimental features for performance
+  experimental: {
+    optimizePackageImports: ['jspdf', 'jspdf-autotable', 'mathjs'],
+  },
+
+  // Custom headers for caching
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on',
+          },
+        ],
+      },
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, max-age=0',
+          },
+        ],
+      },
+    ];
   },
 };
 

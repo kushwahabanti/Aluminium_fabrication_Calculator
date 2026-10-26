@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useContext } from 'react';
-import { API_BASE_URL } from '@/lib/config';
-import { unitsToFraction } from '@/lib/shared/measurement/measurementEngine.js';
+import { useState, useEffect, useContext, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { AuthContext } from '@/context/AuthContext';
 import ProtectedLayout from '@/components/ProtectedLayout';
 
@@ -76,37 +75,48 @@ function WindowDetailsItem({ w, calcData }) {
 }
 
 function ProjectsPageContent() {
-  const { token } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const supabase = createClient();
 
-  useEffect(() => { fetchQuotations(); }, []);
-
-  const fetchQuotations = async () => {
+  const fetchQuotations = useCallback(async () => {
+    if (!user) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/quotations`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error('Failed to fetch projects');
-      const data = await response.json();
-      setQuotations(data);
+      const { data, error: fetchError } = await supabase
+        .from('quotations')
+        .select('*, customers(name, phone)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (fetchError) throw fetchError;
+
+      const mapped = data.map(q => ({
+        ...q,
+        customer: q.customers,
+        projects: q.project_ids || [],
+        totalMaterialCost: q.total_material_cost,
+        labourCost: q.labour_cost,
+        additionalCharges: q.additional_charges,
+        finalPrice: q.final_price,
+        createdAt: q.created_at
+      }));
+      setQuotations(mapped);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => { fetchQuotations(); }, [fetchQuotations]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this project?')) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/quotations/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error('Failed to delete project');
+      const { error: delError } = await supabase.from('quotations').delete().eq('id', id).eq('user_id', user.id);
+      if (delError) throw delError;
       setQuotations(quotations.filter(q => q.id !== id));
       if (expandedId === id) setExpandedId(null);
     } catch (err) {
